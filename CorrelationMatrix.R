@@ -1,0 +1,10 @@
+setwd("G:/Thesis/Data")
+bat.data<-read.csv("BatMasterDataFINALWorking2.csv", header=T)
+names(bat.data)
+library(corrplot)
+library(grDevices)
+bat.subset<-subset(bat.data,select=c(CanHeight,CanMean,Rugosity,Prop015,Prop156,Prop612,PropAb12,TimeSinceRain,TimeSinceFire,AreaWater,RoadLength,LandHeterogeneity,PropUrban,PropAg,PropForest,Entropy))
+mcor<-cor(bat.subset)
+col<-colorRampPalette(c("#BB4444","#EE9988","#FFFFFF","#77AADD","#4477AA"))
+corrplot(mcor1,tl.col="black",tl.srt=60,col=col(200),order="AOE")
+
