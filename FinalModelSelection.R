@@ -1,44 +1,55 @@
-setwd("G:/Thesis/Data")
+library(AICcmodavg)
+library(dplyr)
+library(caret)
+library(broom)
 
 ##Read and attach the data
-bat.data<-read.csv("BatMasterDataFINALworking2.csv",header=T)
-names(bat.data)
-bat<-subset(bat.data,ShanBatDiv != 0)
+bat.data<-read.csv("./Data/BatDataNewCallID.csv",header=T)
 
-##Call package for AIC comparisons
-library(AICcmodavg)
+###################################################################################
+###########################      Confusion Matrix      ############################
+###################################################################################
+man.dat <- read.csv("./Data/manualID.csv")
 
-##Set up variable for diversity
-Bat.Div<-bat$ShanBatDiv
+man.dat.sub <- subset(man.dat, AUTO.ID. != "NoID")
+confusionMatrix(man.dat.sub$AUTO.ID.,man.dat.sub$MANUAL.ID)
+confusionMatrix(man.dat$AUTO.ID., man.dat$MANUAL.ID)
+
+##Calculate normalized variables
+vifCanMean<-bat.data$CanMean-mean(bat.data$CanMean)
+vifEntropy<-bat.data$Entropy-mean(bat.data$Entropy)
+vifRugosity<-bat.data$Rugosity-mean(bat.data$Rugosity)
+vifProp015<-bat.data$Prop015-mean(bat.data$Prop015)
+vifProp156<-bat.data$Prop156-mean(bat.data$Prop156)
+vifProp612<-bat.data$Prop612-mean(bat.data$Prop612)
+vifTimeSinceFire<-bat.data$TimeSinceFire-mean(bat.data$TimeSinceFire)
+vifPropUrban<-bat.data$PropUrban-mean(bat.data$PropUrban)
+vifAreaWater<-bat.data$AreaWater-mean(bat.data$AreaWater)
+vifRoadLength<-bat.data$RoadLength-mean(bat.data$RoadLength)
+vifLandHet<-bat.data$LandHeterogeneity-mean(bat.data$LandHeterogeneity)
 
 ##models
 cand.models<-list()
 
+######################################
+#######    Abundance Models    #######
+######################################
+
 ##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
 
-cand.models[[1]]<-lm(logbat~vifCanMean+vifEntropy+vifRugosity+vifProp156+vifProp612, data=bat)
-cand.models[[2]]<-lm(logbat~vifCanMean*vifEntropy+vifRugosity+vifProp156+vifProp612, data=bat)
-cand.models[[3]]<-lm(logbat~vifCanMean+vifEntropy+vifRugosity, data=bat)
-cand.models[[4]]<-lm(logbat~vifCanMean*vifEntropy+vifRugosity, data=bat)
-
-##2) Time since fire will relate to bat community diversity
-
-cand.models[[5]]<-lm(logbat~vifCanMean*vifTimeSinceFire, data=bat)
-cand.models[[6]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy+vifRugosity+vifProp156+vifProp612, data=bat)
-cand.models[[7]]<-lm(logbat~vifCanMean*vifEntropy+vifRugosity+vifProp156+vifProp612+vifCanMean*vifTimeSinceFire, data=bat)
+cand.models[[1]]<-lm(Total~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+cand.models[[2]]<-lm(Total~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+cand.models[[3]]<-lm(Total~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+cand.models[[4]]<-lm(Total~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
 
 ##3) Stand-level attributes will relate to bat community diversity
 
-cand.models[[8]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifCanMean+vifRoadLength, data=bat)
-cand.models[[9]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifRoadLength+vifProp156+vifProp612+vifAreaWater*vifCanMean+vifEntropy*vifCanMean, data=bat)
-cand.models[[10]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifCanMean*vifAreaWater, data=bat)
-cand.models[[11]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifTimeSinceFire+vifProp156+vifProp612+vifAreaWater*vifCanMean+vifEntropy*vifCanMean, data=bat)
-cand.models[[12]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifTimeSinceFire+vifProp156+vifProp612+vifAreaWater*vifCanMean+vifPropUrban, data=bat)
-cand.models[[13]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifTimeSinceFire+vifCanMean*vifAreaWater+vifProp156+vifEntropy*vifCanMean, data=bat)
-cand.models[[14]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifTimeSinceFire+vifCanMean*vifAreaWater+vifProp612+vifEntropy*vifCanMean, data=bat)
-cand.models[[15]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifTimeSinceFire+vifCanMean*vifAreaWater+vifEntropy:vifCanMean, data=bat)
-cand.models[[16]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifTimeSinceFire+vifCanMean*vifAreaWater+vifProp156+vifProp612+vifEntropy*vifCanMean+vifRoadLength+vifPropUrban, data=bat)
-cand.models[[17]]<-lm(logbat~vifCanMean*vifTimeSinceFire+vifEntropy*vifTimeSinceFire+vifCanMean*vifAreaWater+vifProp156+vifProp612+vifEntropy*vifCanMean+vifRoadLength*vifEntropy+vifPropUrban, data=bat)
+cand.models[[5]]<-lm(Total~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet, data=bat.data)
+cand.models[[6]]<-lm(Total~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet, data=bat.data)
+cand.models[[7]]<-lm(Total~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet, data=bat.data)
+cand.models[[8]]<-lm(Total~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength, data=bat.data)
+cand.models[[9]]<-lm(Total~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength, data=bat.data)
+cand.models[[10]]<-lm(Total~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet, data=bat.data)
 
 ##Create a vector of names to trace back models in set
 modelnames<-paste("Model", 1:length(cand.models), sep=" ")
@@ -46,6 +57,52 @@ modelnames<-paste("Model", 1:length(cand.models), sep=" ")
 ##Generate AICc table
 aictab(cand.set=cand.models, modnames=modelnames, sort=TRUE)
 
+cand.tidy<-lapply(cand.models,tidy)
+lapply(1:length(cand.tidy), function(i) write.csv(cand.tidy[[i]],
+                                        file= paste0("./Results/abundance",i,".csv"),
+                                        row.names=FALSE))
+
+##Calculate richness
+bat.data.rich <- bat.data %>% 
+  mutate(richness = (EPFUPres+LANOPres+LABOPres+LACIPres+LAINPres+MYAUPres+
+                        NYHUPres+PESUPres+TABRPres))
+
+##Richness data
+
+##models
+rich.models<-list()
+
+##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
+
+rich.models[[1]]<-lm(richness~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data.rich)
+rich.models[[2]]<-lm(richness~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data.rich)
+rich.models[[3]]<-lm(richness~vifCanMean+vifEntropy+vifRugosity, data=bat.data.rich)
+rich.models[[4]]<-lm(richness~vifCanMean*vifEntropy+vifRugosity, data=bat.data.rich)
+
+##3) Stand-level attributes will relate to bat community diversity
+
+rich.models[[5]]<-lm(richness~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet, data=bat.data.rich)
+rich.models[[6]]<-lm(richness~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet, data=bat.data.rich)
+rich.models[[7]]<-lm(richness~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet, data=bat.data.rich)
+rich.models[[8]]<-lm(richness~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength, data=bat.data.rich)
+rich.models[[9]]<-lm(richness~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength, data=bat.data.rich)
+rich.models[[10]]<-lm(richness~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet, data=bat.data.rich)
+
+##Create a vector of names to trace back models in set
+modelnames<-paste("Model", 1:length(rich.models), sep=" ")
+
+##Generate AICc table
+aictab(cand.set=rich.models, modnames=modelnames, sort=TRUE)
+
+rich.tidy<-lapply(rich.models,tidy)
+lapply(1:length(rich.tidy), function(i) write.csv(rich.tidy[[i]],
+                                                  file= paste0("./Results/richness",i,".csv"),
+                                                  row.names=FALSE))
+
+
+#################################################################################
+########################      LABO Presence      ################################
+#################################################################################
 ##Set up variable for diversity
 labo<-bat.data$LABOPres
 
@@ -54,29 +111,19 @@ labo.models<-list()
 
 ##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
 
-labo.models[[1]]<-glm(labo~CanMean+Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-labo.models[[2]]<-glm(labo~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-labo.models[[3]]<-glm(labo~CanMean+Entropy+Rugosity, family=binomial, data=bat.data)
-labo.models[[4]]<-glm(labo~CanMean*Entropy+Rugosity, family=binomial, data=bat.data)
-
-##2) Time since fire will relate to bat community diversity
-
-labo.models[[5]]<-glm(labo~CanMean*TimeSinceFire, family=binomial, data=bat.data)
-labo.models[[6]]<-glm(labo~CanMean*TimeSinceFire+Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-labo.models[[7]]<-glm(labo~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612+CanMean*TimeSinceFire, family=binomial, data=bat.data)
+labo.models[[1]]<-lm(labo~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612)
+labo.models[[2]]<-lm(labo~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+labo.models[[3]]<-lm(labo~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+labo.models[[4]]<-lm(labo~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
 
 ##3) Stand-level attributes will relate to bat community diversity
 
-labo.models[[8]]<-glm(labo~CanMean*TimeSinceFire+Entropy+Prop156+Prop612+PropUrban+AreaWater*CanMean+Prop015+RoadLength, family=binomial, data=bat.data)
-labo.models[[9]]<-glm(labo~CanMean*TimeSinceFire+Entropy*RoadLength+Prop156+Prop612+AreaWater*CanMean+Prop015+Entropy*CanMean, family=binomial, data=bat.data)
-labo.models[[10]]<-glm(labo~CanMean*TimeSinceFire+CanMean*AreaWater, family=binomial, data=bat.data)
-labo.models[[11]]<-glm(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+Entropy*CanMean, family=binomial, data=bat.data)
-labo.models[[12]]<-glm(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+PropUrban, family=binomial, data=bat.data)
-labo.models[[13]]<-glm(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop156+Entropy*CanMean, family=binomial, data=bat.data)
-labo.models[[14]]<-glm(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop612+Entropy*CanMean, family=binomial, data=bat.data)
-labo.models[[15]]<-glm(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Entropy:CanMean, family=binomial, data=bat.data)
-labo.models[[16]]<-glm(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength+PropUrban, family=binomial, data=bat.data)
-labo.models[[17]]<-glm(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength*Entropy+PropUrban, family=binomial, data=bat.data)
+labo.models[[5]]<-lm(labo~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+labo.models[[6]]<-lm(labo~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+labo.models[[7]]<-lm(labo~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet)
+labo.models[[8]]<-lm(labo~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength)
+labo.models[[9]]<-lm(labo~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength)
+labo.models[[10]]<-lm(labo~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet)
 
 ##Create a vector of names to trace back models in set
 modelnames<-paste("Model", 1:length(labo.models), sep=" ")
@@ -84,6 +131,159 @@ modelnames<-paste("Model", 1:length(labo.models), sep=" ")
 ##Generate AICc table
 aictab(cand.set=labo.models, modnames=modelnames, sort=TRUE)
 
+labo.tidy<-lapply(labo.models,tidy)
+lapply(1:length(labo.tidy), function(i) write.csv(labo.tidy[[i]],
+                                                  file= paste0("./Results/labo",i,".csv"),
+                                                  row.names=FALSE))
+
+#################################################################################
+########################      LACI Presence      ################################
+#################################################################################
+##Set up variable for diversity
+laci<-bat.data$LACIPres
+
+##models
+laci.models<-list()
+
+##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
+
+laci.models[[1]]<-lm(laci~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612)
+laci.models[[2]]<-lm(laci~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+laci.models[[3]]<-lm(laci~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+laci.models[[4]]<-lm(laci~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
+
+##3) Stand-level attributes will relate to bat community diversity
+
+laci.models[[5]]<-lm(laci~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+laci.models[[6]]<-lm(laci~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+laci.models[[7]]<-lm(laci~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet)
+laci.models[[8]]<-lm(laci~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength)
+laci.models[[9]]<-lm(laci~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength)
+laci.models[[10]]<-lm(laci~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet)
+
+##Create a vector of names to trace back models in set
+modelnames<-paste("Model", 1:length(laci.models), sep=" ")
+
+##Generate AICc table
+aictab(cand.set=laci.models, modnames=modelnames, sort=TRUE)
+
+laci.tidy<-lapply(laci.models,tidy)
+lapply(1:length(laci.tidy), function(i) write.csv(laci.tidy[[i]],
+                                                  file= paste0("./Results/laci",i,".csv"),
+                                                  row.names=FALSE))
+
+
+#################################################################################
+########################      LAIN Presence      ################################
+#################################################################################
+##Set up variable for diversity
+lain<-bat.data$LAINPres
+
+##models
+lain.models<-list()
+
+##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
+
+lain.models[[1]]<-lm(lain~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612)
+lain.models[[2]]<-lm(lain~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+lain.models[[3]]<-lm(lain~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+lain.models[[4]]<-lm(lain~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
+
+##3) Stand-level attributes will relate to bat community diversity
+
+lain.models[[5]]<-lm(lain~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+lain.models[[6]]<-lm(lain~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+lain.models[[7]]<-lm(lain~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet)
+lain.models[[8]]<-lm(lain~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength)
+lain.models[[9]]<-lm(lain~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength)
+lain.models[[10]]<-lm(lain~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet)
+
+##Create a vector of names to trace back models in set
+modelnames<-paste("Model", 1:length(lain.models), sep=" ")
+
+##Generate AICc table
+aictab(cand.set=lain.models, modnames=modelnames, sort=TRUE)
+
+lain.tidy<-lapply(lain.models,tidy)
+lapply(1:length(lain.tidy), function(i) write.csv(lain.tidy[[i]],
+                                                  file= paste0("./Results/lain",i,".csv"),
+                                                  row.names=FALSE))
+
+#################################################################################
+########################      MYAU Presence      ################################
+#################################################################################
+##Set up variable for diversity
+myau<-bat.data$MYAUPres
+
+##models
+myau.models<-list()
+
+##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
+
+myau.models[[1]]<-lm(myau~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612)
+myau.models[[2]]<-lm(myau~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+myau.models[[3]]<-lm(myau~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+myau.models[[4]]<-lm(myau~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
+
+##3) Stand-level attributes will relate to bat community diversity
+
+myau.models[[5]]<-lm(myau~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+myau.models[[6]]<-lm(myau~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+myau.models[[7]]<-lm(myau~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet)
+myau.models[[8]]<-lm(myau~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength)
+myau.models[[9]]<-lm(myau~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength)
+myau.models[[10]]<-lm(myau~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet)
+
+##Create a vector of names to trace back models in set
+modelnames<-paste("Model", 1:length(myau.models), sep=" ")
+
+##Generate AICc table
+aictab(cand.set=myau.models, modnames=modelnames, sort=TRUE)
+
+myau.tidy<-lapply(myau.models,tidy)
+lapply(1:length(myau.tidy), function(i) write.csv(myau.tidy[[i]],
+                                                  file= paste0("./Results/myau",i,".csv"),
+                                                  row.names=FALSE))
+
+#################################################################################
+########################      NYHU Presence      ################################
+#################################################################################
+##Set up variable for diversity
+nyhu<-bat.data$NYHUPres
+
+##models
+nyhu.models<-list()
+
+##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
+
+nyhu.models[[1]]<-lm(nyhu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612)
+nyhu.models[[2]]<-lm(nyhu~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+nyhu.models[[3]]<-lm(nyhu~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+nyhu.models[[4]]<-lm(nyhu~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
+
+##3) Stand-level attributes will relate to bat community diversity
+
+nyhu.models[[5]]<-lm(nyhu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+nyhu.models[[6]]<-lm(nyhu~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+nyhu.models[[7]]<-lm(nyhu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet)
+nyhu.models[[8]]<-lm(nyhu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength)
+nyhu.models[[9]]<-lm(nyhu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength)
+nyhu.models[[10]]<-lm(nyhu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet)
+
+##Create a vector of names to trace back models in set
+modelnames<-paste("Model", 1:length(nyhu.models), sep=" ")
+
+##Generate AICc table
+aictab(cand.set=nyhu.models, modnames=modelnames, sort=TRUE)
+
+nyhu.tidy<-lapply(nyhu.models,tidy)
+lapply(1:length(nyhu.tidy), function(i) write.csv(nyhu.tidy[[i]],
+                                                  file= paste0("./Results/nyhu",i,".csv"),
+                                                  row.names=FALSE))
+
+#################################################################################
+########################      PESU Presence      ################################
+#################################################################################
 ##Set up variable for diversity
 pesu<-bat.data$PESUPres
 
@@ -92,29 +292,19 @@ pesu.models<-list()
 
 ##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
 
-pesu.models[[1]]<-glm(pesu~CanMean+Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-pesu.models[[2]]<-glm(pesu~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-pesu.models[[3]]<-glm(pesu~CanMean+Entropy+Rugosity, family=binomial, data=bat.data)
-pesu.models[[4]]<-glm(pesu~CanMean*Entropy+Rugosity, family=binomial, data=bat.data)
-
-##2) Time since fire will relate to bat community diversity
-
-pesu.models[[5]]<-glm(pesu~CanMean*TimeSinceFire, family=binomial, data=bat.data)
-pesu.models[[6]]<-glm(pesu~CanMean*TimeSinceFire+Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-pesu.models[[7]]<-glm(pesu~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612+CanMean*TimeSinceFire, family=binomial, data=bat.data)
+pesu.models[[1]]<-lm(pesu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612)
+pesu.models[[2]]<-lm(pesu~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+pesu.models[[3]]<-lm(pesu~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+pesu.models[[4]]<-lm(pesu~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
 
 ##3) Stand-level attributes will relate to bat community diversity
 
-pesu.models[[8]]<-glm(pesu~CanMean*TimeSinceFire+Entropy+Prop156+Prop612+PropUrban+AreaWater*CanMean+RoadLength+Prop015, family=binomial, data=bat.data)
-pesu.models[[9]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*RoadLength+Prop156+Prop612+AreaWater*CanMean+Prop015+Entropy*CanMean, family=binomial, data=bat.data)
-pesu.models[[10]]<-glm(pesu~CanMean*TimeSinceFire+CanMean*AreaWater, family=binomial, data=bat.data)
-pesu.models[[11]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+Entropy*CanMean, family=binomial, data=bat.data)
-pesu.models[[12]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+PropUrban, family=binomial, data=bat.data)
-pesu.models[[13]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop156+Entropy*CanMean, family=binomial, data=bat.data)
-pesu.models[[14]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop612+Entropy*CanMean, family=binomial, data=bat.data)
-pesu.models[[15]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Entropy:CanMean, family=binomial, data=bat.data)
-pesu.models[[16]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength+PropUrban, family=binomial, data=bat.data)
-pesu.models[[17]]<-glm(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength*Entropy+PropUrban, family=binomial, data=bat.data)
+pesu.models[[5]]<-lm(pesu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+pesu.models[[6]]<-lm(pesu~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+pesu.models[[7]]<-lm(pesu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet)
+pesu.models[[8]]<-lm(pesu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength)
+pesu.models[[9]]<-lm(pesu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength)
+pesu.models[[10]]<-lm(pesu~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet)
 
 ##Create a vector of names to trace back models in set
 modelnames<-paste("Model", 1:length(pesu.models), sep=" ")
@@ -122,119 +312,56 @@ modelnames<-paste("Model", 1:length(pesu.models), sep=" ")
 ##Generate AICc table
 aictab(cand.set=pesu.models, modnames=modelnames, sort=TRUE)
 
-bat.total<-subset(bat.data,TotalID != 0)
+pesu.tidy<-lapply(pesu.models,tidy)
+lapply(1:length(pesu.tidy), function(i) write.csv(pesu.tidy[[i]],
+                                                  file= paste0("./Results/pesu",i,".csv"),
+                                                  row.names=FALSE))
+
+
+#################################################################################
+########################      TABR Presence      ################################
+#################################################################################
 ##Set up variable for diversity
-total<-bat.total$TotalID
+tabr<-bat.data$TABRPres
 
 ##models
-total.models<-list()
+tabr.models<-list()
 
 ##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
 
-total.models[[1]]<-lm(total~CanMean+Entropy+Rugosity+Prop015+Prop156+Prop612, data=bat.total)
-total.models[[2]]<-lm(total~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612, data=bat.total)
-total.models[[3]]<-lm(total~CanMean+Entropy+Rugosity, data=bat.total)
-total.models[[4]]<-lm(total~CanMean*Entropy+Rugosity, data=bat.total)
-
-##2) Time since fire will relate to bat community diversity
-
-total.models[[5]]<-lm(total~CanMean*TimeSinceFire, data=bat.total)
-total.models[[6]]<-lm(total~CanMean*TimeSinceFire+Entropy+Rugosity+Prop015+Prop156+Prop612, data=bat.total)
-total.models[[7]]<-lm(total~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612+CanMean*TimeSinceFire, data=bat.total)
+tabr.models[[1]]<-lm(tabr~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612)
+tabr.models[[2]]<-lm(tabr~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612, data=bat.data)
+tabr.models[[3]]<-lm(tabr~vifCanMean+vifEntropy+vifRugosity, data=bat.data)
+tabr.models[[4]]<-lm(tabr~vifCanMean*vifEntropy+vifRugosity, data=bat.data)
 
 ##3) Stand-level attributes will relate to bat community diversity
 
-total.models[[8]]<-lm(total~CanMean*TimeSinceFire+Entropy+Prop156+Prop612+PropUrban+AreaWater*Prop015+RoadLength, data=bat.total)
-total.models[[9]]<-lm(total~CanMean*TimeSinceFire+Entropy*RoadLength+Prop156+Prop612+AreaWater*CanMean+Prop015+Entropy*CanMean, data=bat.total)
-total.models[[10]]<-lm(total~CanMean*TimeSinceFire+CanMean*AreaWater, data=bat.total)
-total.models[[11]]<-lm(total~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+Entropy*CanMean, data=bat.total)
-total.models[[12]]<-lm(total~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+PropUrban, data=bat.total)
-total.models[[13]]<-lm(total~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop156+Entropy*CanMean, data=bat.total)
-total.models[[14]]<-lm(total~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop612+Entropy*CanMean, data=bat.total)
-total.models[[15]]<-lm(total~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Entropy:CanMean, data=bat.total)
-total.models[[16]]<-lm(total~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength+PropUrban, data=bat.total)
-total.models[[17]]<-lm(total~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength*Entropy+PropUrban, data=bat.total)
+tabr.models[[5]]<-lm(tabr~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+tabr.models[[6]]<-lm(tabr~vifCanMean*vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifLandHet)
+tabr.models[[7]]<-lm(tabr~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength+vifLandHet)
+tabr.models[[8]]<-lm(tabr~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban*vifLandHet+vifAreaWater+vifRoadLength)
+tabr.models[[9]]<-lm(tabr~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater*vifLandHet+vifRoadLength)
+tabr.models[[10]]<-lm(tabr~vifCanMean+vifEntropy+vifRugosity+vifProp015+vifProp156+vifProp612+vifPropUrban+vifAreaWater+vifRoadLength*vifLandHet)
 
 ##Create a vector of names to trace back models in set
-modelnames<-paste("Model", 1:length(total.models), sep=" ")
+modelnames<-paste("Model", 1:length(tabr.models), sep=" ")
 
 ##Generate AICc table
-aictab(cand.set=total.models, modnames=modelnames, sort=TR
+aictab(cand.set=tabr.models, modnames=modelnames, sort=TRUE)
 
-       ##Set up variable for diversity
-       labo<-bat.data$LABOPres
-       
-       ##models
-       labo.models<-list()
-       
-       ##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
-       
-       labo.models[[1]]<-logistf(labo~CanMean+Entropy+Rugosity+Prop015+Prop156+Prop612, data=bat.data)
-       labo.models[[2]]<-logistf(labo~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612, data=bat.data)
-       labo.models[[3]]<-logistf(labo~CanMean+Entropy+Rugosity, data=bat.data)
-       labo.models[[4]]<-logistf(labo~CanMean*Entropy+Rugosity, data=bat.data)
-       
-       ##2) Time since fire will relate to bat community diversity
-       
-       labo.models[[5]]<-logistf(labo~CanMean*TimeSinceFire, family=binomial, data=bat.data)
-       labo.models[[6]]<-logistf(labo~CanMean*TimeSinceFire+Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-       labo.models[[7]]<-logistf(labo~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612+CanMean*TimeSinceFire, family=binomial, data=bat.data)
-       
-       ##3) Stand-level attributes will relate to bat community diversity
-       
-       labo.models[[8]]<-logistf(labo~CanMean*TimeSinceFire+Entropy+Prop156+Prop612+PropUrban+AreaWater*CanMean+Prop015+RoadLength, family=binomial, data=bat.data)
-       labo.models[[9]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*RoadLength+Prop156+Prop612+AreaWater*CanMean+Prop015+Entropy*CanMean, family=binomial, data=bat.data)
-       labo.models[[10]]<-logistf(labo~CanMean*TimeSinceFire+CanMean*AreaWater, family=binomial, data=bat.data)
-       labo.models[[11]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+Entropy*CanMean, family=binomial, data=bat.data)
-       labo.models[[12]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+PropUrban, family=binomial, data=bat.data)
-       labo.models[[13]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop156+Entropy*CanMean, family=binomial, data=bat.data)
-       labo.models[[14]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop612+Entropy*CanMean, family=binomial, data=bat.data)
-       labo.models[[15]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Entropy:CanMean, family=binomial, data=bat.data)
-       labo.models[[16]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength+PropUrban, family=binomial, data=bat.data)
-       labo.models[[17]]<-logistf(labo~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength*Entropy+PropUrban, family=binomial, data=bat.data)
-       
-       ##Create a vector of names to trace back models in set
-       modelnames<-paste("Model", 1:length(labo.models), sep=" ")
-       
-       ##Generate AICc table
-       aictab(cand.set=labo.models, modnames=modelnames, sort=TRUE)       
+tabr.tidy<-lapply(tabr.models,tidy)
+lapply(1:length(tabr.tidy), function(i) write.csv(tabr.tidy[[i]],
+                                                  file= paste0("./Results/tabr",i,".csv"),
+                                                  row.names=FALSE))
 
-       pesu.models<-list()
-       
-       ##1) Stand-level attributes will contribute to bat diversity. Expected contributions would be canopy height, entropy, rugosity, and proportion of returns in height bins.
-       
-       pesu.models[[1]]<-logistf(pesu~CanMean+Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-       pesu.models[[2]]<-logistf(pesu~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-       pesu.models[[3]]<-logistf(pesu~CanMean+Entropy+Rugosity, family=binomial, data=bat.data)
-       pesu.models[[4]]<-logistf(pesu~CanMean*Entropy+Rugosity, family=binomial, data=bat.data)
-       
-       ##2) Time since fire will relate to bat community diversity
-       
-       pesu.models[[5]]<-logistf(pesu~CanMean*TimeSinceFire, family=binomial, data=bat.data)
-       pesu.models[[6]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy+Rugosity+Prop015+Prop156+Prop612, family=binomial, data=bat.data)
-       pesu.models[[7]]<-logistf(pesu~CanMean*Entropy+Rugosity+Prop015+Prop156+Prop612+CanMean*TimeSinceFire, family=binomial, data=bat.data)
-       
-       ##3) Stand-level attributes will relate to bat community diversity
-       
-       pesu.models[[8]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy+Prop156+Prop612+PropUrban+AreaWater*CanMean+RoadLength+Prop015, family=binomial, data=bat.data)
-       pesu.models[[9]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*RoadLength+Prop156+Prop612+AreaWater*CanMean+Prop015+Entropy*CanMean, family=binomial, data=bat.data)
-       pesu.models[[10]]<-logistf(pesu~CanMean*TimeSinceFire+CanMean*AreaWater, family=binomial, data=bat.data)
-       pesu.models[[11]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+Entropy*CanMean, family=binomial, data=bat.data)
-       pesu.models[[12]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+Prop156+Prop612+AreaWater*CanMean+PropUrban, family=binomial, data=bat.data)
-       pesu.models[[13]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop156+Entropy*CanMean, family=binomial, data=bat.data)
-       pesu.models[[14]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Prop612+Entropy*CanMean, family=binomial, data=bat.data)
-       pesu.models[[15]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+Prop015+CanMean*AreaWater+Entropy:CanMean, family=binomial, data=bat.data)
-       pesu.models[[16]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength+PropUrban, family=binomial, data=bat.data)
-       pesu.models[[17]]<-logistf(pesu~CanMean*TimeSinceFire+Entropy*TimeSinceFire+CanMean*AreaWater+Prop015+Prop156+Prop612+Entropy*CanMean+RoadLength*Entropy+PropUrban, family=binomial, data=bat.data)
-       
-vifCanMean<-bat$CanMean-mean(bat$CanMean)
-vifEntropy<-bat$Entropy-mean(bat$Entropy)
-vifRugosity<-bat$Rugosity-mean(bat$Rugosity)
-vifProp015<-bat$Prop015-mean(bat$Prop015)
-vifProp156<-bat$Prop156-mean(bat$Prop156)
-vifProp612<-bat$Prop612-mean(bat$Prop612)
-vifTimeSinceFire<-bat$TimeSinceFire-mean(bat$TimeSinceFire)
-vifPropUrban<-bat$PropUrban-mean(bat$PropUrban)
-vifAreaWater<-bat$AreaWater-mean(bat$AreaWater)
-vifRoadLength<-bat$RoadLength-mean(bat$RoadLength)
-       
+
+##Cummulative sums of each bat
+sum(bat.data$EPFU, na.rm=TRUE)
+sum(bat.data$LABO, na.rm=TRUE)
+sum(bat.data$LACI, na.rm=TRUE)
+sum(bat.data$LAIN, na.rm=TRUE)
+sum(bat.data$MYAU, na.rm = TRUE)
+sum(bat.data$NYHU, na.rm=TRUE)
+sum(bat.data$PESU, na.rm=TRUE)
+sum(bat.data$TABR, na.rm = TRUE)
+sum(bat.data$TotalID)
