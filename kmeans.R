@@ -1,40 +1,5 @@
-##set directory
-setwd("G:/Project_Home/Products/Collated Metrics")
-getwd()
-
 ##read data
-osdata<-read.csv("OSAllGIS.csv", header=T)
-
-names(osdata)
-
-##calculate the return counts
-osbsdata$SumX<-(X0to3+X3to6+X6to9+X9to12+X12to15+X15to18+X18to21+X21to24+X24to27+X27to30+X30to33)
-
-detach(osbsdata)
-attach(osdata)
-
-names(osbsdata)
-
-##add columns with percent returns by bin
-osbsdata$P0to3<-(X0to3/SumX)
-osbsdata$P3to6<-(X3to6/SumX)
-osbsdata$P6to9<-(X6to9/SumX)
-osbsdata$P9to12<-(X9to12/SumX)
-osbsdata$P12to15<-(X12to15/SumX)
-osbsdata$P15to18<-(X15to18/SumX)
-osbsdata$P18to21<-(X18to21/SumX)
-osbsdata$P21to24<-(X21to24/SumX)
-osbsdata$P24to27<-(X24to27/SumX)
-osbsdata$P27to30<-(X27to30/SumX)
-osbsdata$P30to33<-(X30to33/SumX)
-
-detach(osbsdata)
-attach(osbsdata)
-
-names(osbsdata)
-
-##write table with percentages
-write.table(unclass(osbsdata), "OSBSdatatrunc.txt", sep=",", col.names=T, row.names=F)
+osdata<-read.csv("./Data/2020-01_Swanson-et-al_Bats-Forest-Str_Quant-Lidar.csv", header=T)
 
 #write the k means cluster
 model3<-kmeans(data.frame(ElevMin,ElevMax,ElevMean,ElevStdev,ElevSkew,ElevKurt,Ret3Ab3,PerAb3,PropStrat5, Prop515, Prop153, Prop36, Prop69, Prop912, PropAb12), centers = 6, algorithm="Lloyd", iter.max=1000)
@@ -140,6 +105,7 @@ data.sub6<-subset(osclusters, Cluster6==6)
 write.table(unclass(data.sub6), "OSBSclustersSub6-5-6.txt", sep=",", col.names=T, row.names=F)
 
 ##randomly select sites from the subsets, extra sites were selected to ensure that there were enough sites within the boundaries of Ordway-Swisher
+set.seed(0)
 random1<-data.sub1[sample(nrow(data.sub1), 30), ]
 random2<-data.sub2[sample(nrow(data.sub2), 30), ]
 random3<-data.sub3[sample(nrow(data.sub3), 30), ]
